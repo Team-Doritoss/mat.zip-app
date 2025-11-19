@@ -13,10 +13,7 @@ interface KakaoMapProps {
 export default function KakaoMap({ restaurants = [], focusedRestaurant = null }: KakaoMapProps) {
   const webViewRef = useRef<WebView>(null);
 
-  // 초기 로드 후 위치 권한 확인 (네이티브만)
   useEffect(() => {
-    // 웹에서는 HTML 내부에서 Geolocation API 사용
-    // 네이티브 앱에서만 expo-location 사용
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -32,13 +29,11 @@ export default function KakaoMap({ restaurants = [], focusedRestaurant = null }:
           }
         }
       } catch (error) {
-        // 웹에서는 에러 무시 (HTML 내부에서 처리)
         console.log('Using HTML Geolocation API for web');
       }
     })();
   }, []);
 
-  // 레스토랑 마커 표시
   useEffect(() => {
     if (restaurants.length > 0 && webViewRef.current) {
       const markersData = JSON.stringify(restaurants);
@@ -173,8 +168,20 @@ export default function KakaoMap({ restaurants = [], focusedRestaurant = null }:
           if (!map) return;
 
           const position = new kakao.maps.LatLng(restaurant.latitude, restaurant.longitude);
-          map.setCenter(position);
+
+          // 줌 레벨을 먼저 설정
           map.setLevel(3);
+
+          // 프로젝션 객체를 사용하여 좌표를 픽셀로 변환
+          const projection = map.getProjection();
+          const point = projection.pointFromCoords(position);
+
+          // 마커를 화면 중앙보다 위쪽에 위치시키기 위해 y 좌표를 조정 (100픽셀 아래로)
+          const adjustedPoint = new kakao.maps.Point(point.x, point.y + 100);
+
+          // 조정된 픽셀 좌표를 다시 지도 좌표로 변환하여 중심점으로 설정
+          const adjustedPosition = projection.coordsFromPoint(adjustedPoint);
+          map.setCenter(adjustedPosition);
         }
       </script>
     </body>

@@ -44,7 +44,14 @@ export default function BottomSheet({
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      // 세로 방향으로 조금이라도 움직이면 즉시 반응
+      return Math.abs(gestureState.dy) > 0;
+    },
+    onPanResponderGrant: () => {
+      // 드래그 시작 시 애니메이션 중지
+      sheetHeight.stopAnimation();
+    },
     onPanResponderMove: (_, gestureState) => {
       const newHeight = currentHeight - gestureState.dy;
       if (newHeight >= MIN_HEIGHT && newHeight <= MAX_HEIGHT) {
@@ -78,9 +85,6 @@ export default function BottomSheet({
     <Animated.View style={[styles.container, { height: sheetHeight }]}>
       <View style={styles.header} {...panResponder.panHandlers}>
         <View style={styles.handle} />
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Feather name="x" size={24} color="#666" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.minimizedContent}>
