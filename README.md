@@ -1,7 +1,7 @@
 # 맛.zip (Matzip AI) - 프로토타입
 
 2025년 새싹 해커톤(SeSAC Hackathon) AI 서비스 프로토타입
-![service ui]([https://drive.google.com/file/d/1dd6EfBupQ8LBZ_8ircLEQCIFQGjlJqLB/view?usp=sharing](https://drive.google.com/file/d/1dd6EfBupQ8LBZ_8ircLEQCIFQGjlJqLB/preview))
+![service ui](https://drive.google.com/file/d/1dd6EfBupQ8LBZ_8ircLEQCIFQGjlJqLB/preview)
 
 ## 프로젝트 소개
 
