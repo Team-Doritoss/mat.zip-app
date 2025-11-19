@@ -18,9 +18,10 @@ import { Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 interface ChatInterfaceProps {
   onRestaurantsFound?: (restaurants: Restaurant[]) => void;
   onNavigationRequest?: (restaurant: Restaurant) => void;
+  dragHandlers?: any;
 }
 
-export default function ChatInterface({ onRestaurantsFound, onNavigationRequest }: ChatInterfaceProps) {
+export default function ChatInterface({ onRestaurantsFound, onNavigationRequest, dragHandlers }: ChatInterfaceProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -138,7 +139,7 @@ export default function ChatInterface({ onRestaurantsFound, onNavigationRequest 
         </View>
         {isUser && (
           <View style={styles.iconContainer}>
-            <Feather name="user" size={24} color="#007AFF" />
+            <Feather name="user" size={24} color="#369667" />
           </View>
         )}
       </View>
@@ -151,7 +152,7 @@ export default function ChatInterface({ onRestaurantsFound, onNavigationRequest 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
-      <View style={styles.header}>
+      <View style={styles.header} {...dragHandlers}>
         <View style={styles.headerTitleRow}>
           <MaterialIcons name="smart-toy" size={20} color="#369667" />
           <Text style={styles.headerTitle}>AI 맛집 어시스턴트</Text>
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   userBubble: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#369667',
   },
   assistantBubble: {
     backgroundColor: '#fff',
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#369667',
     overflow: 'hidden',
   },
   restaurantInfo: {
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#369667',
   },
   navBtnText: {
     color: '#fff',
@@ -408,7 +409,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   sendButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#369667',
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,

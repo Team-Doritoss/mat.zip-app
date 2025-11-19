@@ -15,9 +15,10 @@ export interface Restaurant {
   priceRange?: string;
   distance?: {
     meters: number;
-    walkTime?: number; // 분
-    carTime?: number; // 분
-    transitTime?: number; // 분
+    walkTime?: number;
+    carTime?: number;
+    transitTime?: number;
+    pathCoordinates?: Array<{ lat: number; lng: number }>;
   };
 }
 

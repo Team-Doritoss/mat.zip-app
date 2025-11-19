@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Linking, PanResponder, Animated, Dimensions, Keyboard, Platform } from 'react-native';
+import { StyleSheet, View, Linking, PanResponder, Animated, Dimensions, Keyboard } from 'react-native';
 import * as Location from 'expo-location';
 import KakaoMap from '@/components/KakaoMap';
 import ChatInterface from '@/components/ChatInterface';
 import BottomSheet from '@/components/BottomSheet';
 import { Restaurant } from '@/types/restaurant';
 import { KAKAO_REST_API_KEY } from '@/constants/key';
+import { useHeaderStore } from '@/stores/useHeaderStore';
 
 const { height } = Dimensions.get('window');
 const MIN_CHAT_HEIGHT = height * 0.3;
@@ -20,6 +21,11 @@ export default function HomeScreen() {
   const [currentChatHeight, setCurrentChatHeight] = useState(DEFAULT_CHAT_HEIGHT);
   const [heightBeforeKeyboard, setHeightBeforeKeyboard] = useState(DEFAULT_CHAT_HEIGHT);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const setSheetHeight = useHeaderStore((state) => state.setSheetHeight);
+
+  useEffect(() => {
+    setSheetHeight(DEFAULT_CHAT_HEIGHT);
+  }, [setSheetHeight]);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
@@ -28,6 +34,7 @@ export default function HomeScreen() {
         setIsKeyboardVisible(true);
         setHeightBeforeKeyboard(currentChatHeight);
         setCurrentChatHeight(MAX_CHAT_HEIGHT);
+        setSheetHeight(MAX_CHAT_HEIGHT);
         Animated.spring(chatHeight, {
           toValue: MAX_CHAT_HEIGHT,
           useNativeDriver: false,
@@ -48,7 +55,7 @@ export default function HomeScreen() {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
     };
-  }, [currentChatHeight, chatHeight]);
+  }, [currentChatHeight, chatHeight, setSheetHeight]);
 
   const getRouteInfo = async (
     userLat: number,
@@ -72,12 +79,13 @@ export default function HomeScreen() {
             car_fuel: 'GASOLINE',
             car_hipass: false,
             alternatives: false,
-            road_details: false
+            road_details: true
           })
         }
       );
 
       let meters = 0;
+      let pathCoordinates: Array<{ lat: number; lng: number }> = [];
 
       if (carResponse.ok) {
         const carData = await carResponse.json();
@@ -85,6 +93,26 @@ export default function HomeScreen() {
           const route = carData.routes[0];
           meters = route.summary.distance;
           console.log('📍 거리:', meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${meters}m`);
+
+          // 경로 좌표 추출
+          if (route.sections && route.sections.length > 0) {
+            route.sections.forEach((section: any) => {
+              if (section.roads && section.roads.length > 0) {
+                section.roads.forEach((road: any) => {
+                  if (road.vertexes && road.vertexes.length > 0) {
+                    // vertexes는 [x1, y1, x2, y2, ...] 형태
+                    for (let i = 0; i < road.vertexes.length; i += 2) {
+                      pathCoordinates.push({
+                        lng: road.vertexes[i],
+                        lat: road.vertexes[i + 1]
+                      });
+                    }
+                  }
+                });
+              }
+            });
+          }
+          console.log('🛣️ 경로 좌표 개수:', pathCoordinates.length);
         }
       } else {
         const errorText = await carResponse.text();
@@ -93,11 +121,13 @@ export default function HomeScreen() {
 
       return {
         meters,
+        pathCoordinates,
       };
     } catch (error) {
       console.log('카카오 길찾기 API 호출 실패:', error);
       return {
         meters: 0,
+        pathCoordinates: [],
       };
     }
   };
@@ -105,6 +135,7 @@ export default function HomeScreen() {
   const handleRestaurantsFound = async (foundRestaurants: Restaurant[]) => {
     console.log('🎯 handleRestaurantsFound 호출됨, 식당 수:', foundRestaurants.length);
 
+    // 즉시 식당 목록 표시 (거리 정보 없이)
     setRestaurants(foundRestaurants);
     setCurrentIndex(0);
     setShowChat(false);
@@ -121,7 +152,6 @@ export default function HomeScreen() {
       }).start();
     }, 300);
 
-    // 거리/시간 정보는 백그라운드에서 지연 로딩
     let userLat = 37.5172;
     let userLng = 127.0473;
 
@@ -138,24 +168,39 @@ export default function HomeScreen() {
     }
 
     console.log('🔄 거리/시간 정보 로딩 시작...');
-    const restaurantsWithDistance = await Promise.all(
-      foundRestaurants.map(async (restaurant) => {
-        const routeInfo = await getRouteInfo(
-          userLat,
-          userLng,
-          restaurant.latitude,
-          restaurant.longitude
-        );
 
-        return {
-          ...restaurant,
-          distance: routeInfo,
-        };
-      })
-    );
+    // 첫 번째 식당의 거리 정보를 즉시 로드
+    if (foundRestaurants.length > 0) {
+      const firstRouteInfo = await getRouteInfo(
+        userLat,
+        userLng,
+        foundRestaurants[0].latitude,
+        foundRestaurants[0].longitude
+      );
 
-    console.log('🍽️ 거리 정보 추가 완료:', restaurantsWithDistance.length);
-    setRestaurants(restaurantsWithDistance);
+      // 원본 객체를 직접 수정 (참조 유지)
+      foundRestaurants[0].distance = firstRouteInfo;
+      setRestaurants([...foundRestaurants]);
+      console.log('✅ 첫 번째 식당 거리 정보 로드 완료');
+    }
+
+    // 나머지 식당들은 백그라운드에서 순차적으로 로드
+    for (let i = 1; i < foundRestaurants.length; i++) {
+      const routeInfo = await getRouteInfo(
+        userLat,
+        userLng,
+        foundRestaurants[i].latitude,
+        foundRestaurants[i].longitude
+      );
+
+      // 원본 객체를 직접 수정 (참조 유지)
+      foundRestaurants[i].distance = routeInfo;
+      setRestaurants([...foundRestaurants]);
+
+      console.log(`✅ ${i + 1}번째 식당 거리 정보 로드 완료`);
+    }
+
+    console.log('🍽️ 모든 거리 정보 로딩 완료');
   };
 
   const handleIndexChange = (newIndex: number) => {
@@ -171,6 +216,7 @@ export default function HomeScreen() {
       const newHeight = currentChatHeight - gestureState.dy;
       if (newHeight >= MIN_CHAT_HEIGHT && newHeight <= MAX_CHAT_HEIGHT) {
         chatHeight.setValue(newHeight);
+        setSheetHeight(newHeight);
       }
     },
     onPanResponderRelease: (_, gestureState) => {
@@ -190,6 +236,7 @@ export default function HomeScreen() {
       }
 
       setCurrentChatHeight(newHeight);
+      setSheetHeight(newHeight);
       Animated.spring(chatHeight, {
         toValue: newHeight,
         useNativeDriver: false,
@@ -235,6 +282,7 @@ export default function HomeScreen() {
       <KakaoMap
         restaurants={restaurants}
         focusedRestaurant={restaurants[currentIndex]}
+        onMarkerClick={handleIndexChange}
       />
 
       {showChat && restaurants.length === 0 && (
@@ -243,7 +291,10 @@ export default function HomeScreen() {
             <View style={styles.handle} />
           </View>
           <View style={styles.chatContent}>
-            <ChatInterface onRestaurantsFound={handleRestaurantsFound} />
+            <ChatInterface
+              onRestaurantsFound={handleRestaurantsFound}
+              dragHandlers={chatPanResponder.panHandlers}
+            />
           </View>
         </Animated.View>
       )}
@@ -258,6 +309,7 @@ export default function HomeScreen() {
           onClose={() => {
             setRestaurants([]);
             setShowChat(true);
+            setSheetHeight(DEFAULT_CHAT_HEIGHT);
           }}
         />
       )}

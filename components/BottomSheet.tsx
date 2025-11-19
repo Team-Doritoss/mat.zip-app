@@ -1,6 +1,8 @@
 import { Restaurant } from "@/types/restaurant";
-import React, { useState } from "react";
+import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import React, { useState, useEffect } from "react";
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Linking,
@@ -10,12 +12,11 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
-import { Feather, MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useHeaderStore } from "@/stores/useHeaderStore";
 
 const { height } = Dimensions.get("window");
-const MIN_HEIGHT = 260;
+const MIN_HEIGHT = 230;
 const MAX_HEIGHT = height * 0.90;
 const DEFAULT_HEIGHT = height * 0.55;
 
@@ -26,6 +27,7 @@ interface BottomSheetProps {
   onNext: () => void;
   onNavigate: (restaurant: Restaurant) => void;
   onClose: () => void;
+  onHeightChange?: (height: number) => void;
 }
 
 export default function BottomSheet({
@@ -35,13 +37,27 @@ export default function BottomSheet({
   onNext,
   onNavigate,
   onClose,
+  onHeightChange,
 }: BottomSheetProps) {
   const [sheetHeight] = useState(new Animated.Value(DEFAULT_HEIGHT));
   const [currentHeight, setCurrentHeight] = useState(DEFAULT_HEIGHT);
+  const updateHeaderSheetHeight = useHeaderStore(state => state.setSheetHeight);
 
   const restaurant = restaurants[currentIndex];
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === restaurants.length - 1;
+
+  // 초기 높이 설정
+  useEffect(() => {
+    updateHeaderSheetHeight(DEFAULT_HEIGHT);
+  }, [updateHeaderSheetHeight]);
+
+  // 컴포넌트 언마운트 시 높이 초기화
+  useEffect(() => {
+    return () => {
+      updateHeaderSheetHeight(0);
+    };
+  }, [updateHeaderSheetHeight]);
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -55,6 +71,8 @@ export default function BottomSheet({
       const newHeight = currentHeight - gestureState.dy;
       if (newHeight >= MIN_HEIGHT && newHeight <= MAX_HEIGHT) {
         sheetHeight.setValue(newHeight);
+        updateHeaderSheetHeight(newHeight);
+        onHeightChange?.(newHeight);
       }
     },
     onPanResponderRelease: (_, gestureState) => {
@@ -71,6 +89,8 @@ export default function BottomSheet({
       }
 
       setCurrentHeight(newHeight);
+      updateHeaderSheetHeight(newHeight);
+      onHeightChange?.(newHeight);
       Animated.spring(sheetHeight, {
         toValue: newHeight,
         useNativeDriver: false,
@@ -89,31 +109,28 @@ export default function BottomSheet({
 
         <View style={styles.minimizedContent}>
           <View style={styles.compactInfo}>
-            <Text style={styles.compactName} numberOfLines={1}>
-              {restaurant.name}
-            </Text>
+            <View style={styles.nameDistanceRow}>
+              <Text style={styles.compactName} numberOfLines={1}>
+                {restaurant.name}
+              </Text>
+              {restaurant.distance && restaurant.distance.meters > 0 ? (
+                <Text style={styles.nameDistanceText}>
+                  {restaurant.distance.meters >= 1000
+                    ? `${(restaurant.distance.meters / 1000).toFixed(1)}km`
+                    : `${restaurant.distance.meters}m`}
+                </Text>
+              ) : (
+                !restaurant.distance && (
+                  <ActivityIndicator size="small" color="#999" />
+                )
+              )}
+            </View>
             <View style={styles.compactRatingRow}>
               <View style={styles.ratingContainer}>
                 <Ionicons name="star" size={14} color="#369667" />
                 <Text style={styles.compactRating}>{restaurant.rating}</Text>
               </View>
               <Text style={styles.compactCategory}>{restaurant.category}</Text>
-            </View>
-
-            <View style={styles.distanceInfo}>
-              <View style={styles.distanceRow}>
-                <Feather name="map-pin" size={12} color="#666" />
-                <Text style={styles.distanceText}>
-                  {restaurant.distance && restaurant.distance.meters > 0
-                    ? restaurant.distance.meters >= 1000
-                      ? `${(restaurant.distance.meters / 1000).toFixed(1)}km`
-                      : `${restaurant.distance.meters}m`
-                    : '--'}
-                </Text>
-                {!restaurant.distance && (
-                  <ActivityIndicator size="small" color="#999" style={styles.loadingIndicator} />
-                )}
-              </View>
             </View>
           </View>
 
@@ -283,11 +300,24 @@ const styles = StyleSheet.create({
   compactInfo: {
     marginBottom: 12,
   },
+  nameDistanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+    gap: 8,
+  },
   compactName: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#222",
-    marginBottom: 4,
+    flex: 1,
+  },
+  nameDistanceText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#369667",
+    flexShrink: 0,
   },
   compactRatingRow: {
     flexDirection: "row",
