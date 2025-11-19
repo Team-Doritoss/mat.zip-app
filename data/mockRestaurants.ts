@@ -98,11 +98,9 @@ export const mockRestaurants: Restaurant[] = [
   },
 ];
 
-// AI 응답 시뮬레이션을 위한 키워드 매칭 함수
 export const searchRestaurants = (query: string): Restaurant[] => {
   const lowerQuery = query.toLowerCase();
 
-  // 키워드별 필터링
   if (lowerQuery.includes('애견') || lowerQuery.includes('반려') || lowerQuery.includes('강아지')) {
     return mockRestaurants.filter(r => r.features.includes('애견동반'));
   }
@@ -131,11 +129,9 @@ export const searchRestaurants = (query: string): Restaurant[] => {
     return mockRestaurants.filter(r => r.category.includes('일식'));
   }
 
-  // 기본: 평점 높은 순으로 3개
   return mockRestaurants.slice().sort((a, b) => b.rating - a.rating).slice(0, 3);
 };
 
-// AI 응답 생성 함수
 export const generateAIResponse = (query: string, restaurants: Restaurant[]): string => {
   if (restaurants.length === 0) {
     return '죄송합니다. 조건에 맞는 맛집을 찾지 못했습니다. 다른 조건으로 검색해보시겠어요?';

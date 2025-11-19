@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "sesac-prototype",
-    "slug": "sesac-prototype",
+    "name": "맛.zip",
+    "slug": "matzip",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "sesacprototype",
-    "userInterfaceStyle": "automatic",
+    "scheme": "matzip",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -17,8 +17,13 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "맛.zip이 근처 맛집을 추천하고 길찾기 서비스를 제공하기 위해 위치 정보가 필요합니다.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "맛.zip이 근처 맛집을 추천하고 길찾기 서비스를 제공하기 위해 위치 정보가 필요합니다."
-      }
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "맛.zip이 근처 맛집을 추천하고 길찾기 서비스를 제공하기 위해 위치 정보가 필요합니다.",
+        "LSApplicationQueriesSchemes": [
+          "kakaomap",
+          "kakaomap"
+        ]
+      },
+      "bundleIdentifier": "me.cher1shrxd.matzip"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,8 +34,29 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
-      ]
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "kakaomap"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "kakaomap"
+            }
+          ]
+        }
+      ],
+      "package": "me.cher1shrxd.matzip"
     },
     "web": {
       "bundler": "metro",

@@ -1,5 +1,5 @@
-import { Restaurant } from '@/types/restaurant';
-import React, { useState } from 'react';
+import { Restaurant } from "@/types/restaurant";
+import React, { useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -10,13 +10,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
+  ActivityIndicator,
+} from "react-native";
+import { Feather, MaterialIcons, Ionicons } from "@expo/vector-icons";
 
-const { height } = Dimensions.get('window');
-const MIN_HEIGHT = 180;
-const MAX_HEIGHT = height * 0.85;
-const DEFAULT_HEIGHT = height * 0.5;
+const { height } = Dimensions.get("window");
+const MIN_HEIGHT = 260;
+const MAX_HEIGHT = height * 0.90;
+const DEFAULT_HEIGHT = height * 0.55;
 
 interface BottomSheetProps {
   restaurants: Restaurant[];
@@ -45,11 +46,9 @@ export default function BottomSheet({
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, gestureState) => {
-      // 세로 방향으로 조금이라도 움직이면 즉시 반응
       return Math.abs(gestureState.dy) > 0;
     },
     onPanResponderGrant: () => {
-      // 드래그 시작 시 애니메이션 중지
       sheetHeight.stopAnimation();
     },
     onPanResponderMove: (_, gestureState) => {
@@ -83,46 +82,68 @@ export default function BottomSheet({
 
   return (
     <Animated.View style={[styles.container, { height: sheetHeight }]}>
-      <View style={styles.header} {...panResponder.panHandlers}>
-        <View style={styles.handle} />
-      </View>
-
-      <View style={styles.minimizedContent}>
-        <View style={styles.compactInfo}>
-          <Text style={styles.compactName} numberOfLines={1}>
-            {restaurant.name}
-          </Text>
-          <View style={styles.compactRatingRow}>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color="#369667" />
-              <Text style={styles.compactRating}>{restaurant.rating}</Text>
-            </View>
-            <Text style={styles.compactCategory}>{restaurant.category}</Text>
-          </View>
+      <View style={styles.dragArea} {...panResponder.panHandlers}>
+        <View style={styles.header}>
+          <View style={styles.handle} />
         </View>
 
-        <View style={styles.navigation}>
-          <TouchableOpacity
-            style={[styles.navButton, isFirst && styles.navButtonDisabled]}
-            onPress={onPrevious}
-            disabled={isFirst}
-          >
-            <Feather name="chevron-left" size={18} color={isFirst ? '#999' : '#fff'} />
-          </TouchableOpacity>
+        <View style={styles.minimizedContent}>
+          <View style={styles.compactInfo}>
+            <Text style={styles.compactName} numberOfLines={1}>
+              {restaurant.name}
+            </Text>
+            <View style={styles.compactRatingRow}>
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={14} color="#369667" />
+                <Text style={styles.compactRating}>{restaurant.rating}</Text>
+              </View>
+              <Text style={styles.compactCategory}>{restaurant.category}</Text>
+            </View>
 
-          <View style={styles.indicator}>
+            <View style={styles.distanceInfo}>
+              <View style={styles.distanceRow}>
+                <Feather name="map-pin" size={12} color="#666" />
+                <Text style={styles.distanceText}>
+                  {restaurant.distance && restaurant.distance.meters > 0
+                    ? restaurant.distance.meters >= 1000
+                      ? `${(restaurant.distance.meters / 1000).toFixed(1)}km`
+                      : `${restaurant.distance.meters}m`
+                    : '--'}
+                </Text>
+                {!restaurant.distance && (
+                  <ActivityIndicator size="small" color="#999" style={styles.loadingIndicator} />
+                )}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.navigation}>
+            <TouchableOpacity
+              style={[styles.navButton, isFirst && styles.navButtonDisabled]}
+              onPress={onPrevious}
+              disabled={isFirst}>
+              <Feather
+                name="chevron-left"
+                size={18}
+                color={isFirst ? "#999" : "#fff"}
+              />
+            </TouchableOpacity>
+
             <Text style={styles.indicatorText}>
               {currentIndex + 1} / {restaurants.length}
             </Text>
-          </View>
 
-          <TouchableOpacity
-            style={[styles.navButton, isLast && styles.navButtonDisabled]}
-            onPress={onNext}
-            disabled={isLast}
-          >
-            <Feather name="chevron-right" size={18} color={isLast ? '#999' : '#fff'} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navButton, isLast && styles.navButtonDisabled]}
+              onPress={onNext}
+              disabled={isLast}>
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={isLast ? "#999" : "#fff"}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -137,26 +158,26 @@ export default function BottomSheet({
         </View>
 
         <View style={styles.infoSection}>
-          <View style={styles.infoRow}>
+          <View style={styles.detailRow}>
             <View style={styles.iconWrapper}>
               <Feather name="map-pin" size={18} color="#369667" />
             </View>
             <Text style={styles.infoText}>{restaurant.address}</Text>
           </View>
-          <View style={styles.infoRow}>
+          <View style={styles.detailRow}>
             <View style={styles.iconWrapper}>
               <Feather name="clock" size={18} color="#369667" />
             </View>
             <Text style={styles.infoText}>{restaurant.hours}</Text>
           </View>
-          <View style={styles.infoRow}>
+          <View style={styles.detailRow}>
             <View style={styles.iconWrapper}>
               <Feather name="phone" size={18} color="#369667" />
             </View>
             <Text style={styles.infoText}>{restaurant.phone}</Text>
           </View>
           {restaurant.priceRange && (
-            <View style={styles.infoRow}>
+            <View style={styles.detailRow}>
               <View style={styles.iconWrapper}>
                 <Feather name="dollar-sign" size={18} color="#369667" />
               </View>
@@ -187,27 +208,22 @@ export default function BottomSheet({
         </View>
       </ScrollView>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.searchAgainButton}
-          onPress={onClose}
-        >
+      <View style={[styles.actions, { borderTopWidth: currentHeight >= DEFAULT_HEIGHT ? 1 : 0 }]}>
+        <TouchableOpacity style={styles.searchAgainButton} onPress={onClose}>
           <Feather name="search" size={16} color="#666" />
           <Text style={styles.searchAgainButtonText}>다시 검색</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.callButton}
-          onPress={() => Linking.openURL(`tel:${restaurant.phone}`)}
-        >
+          onPress={() => Linking.openURL(`tel:${restaurant.phone}`)}>
           <Feather name="phone" size={16} color="#369667" />
           <Text style={styles.callButtonText}>전화</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navigateButton}
-          onPress={() => onNavigate(restaurant)}
-        >
+          onPress={() => onNavigate(restaurant)}>
           <Feather name="navigation" size={16} color="#fff" />
           <Text style={styles.navigateButtonText}>길찾기</Text>
         </TouchableOpacity>
@@ -218,111 +234,140 @@ export default function BottomSheet({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 10,
   },
+  dragArea: {
+    // 드래그 가능한 영역 (헤더 + minimizedContent)
+  },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
-    position: 'relative',
+    position: "relative",
   },
   handle: {
     width: 48,
     height: 5,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
     borderRadius: 3,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     top: 12,
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     fontSize: 24,
-    color: '#666',
+    color: "#666",
   },
   minimizedContent: {
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    borderBottomColor: "#f0f0f0",
+    borderBottomWidth: 1
   },
   compactInfo: {
     marginBottom: 12,
   },
   compactName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
     marginBottom: 4,
   },
   compactRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     marginRight: 8,
   },
   compactRating: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#369667',
+    fontWeight: "600",
+    color: "#369667",
   },
   compactCategory: {
     fontSize: 13,
-    color: '#666',
+    color: "#666",
+  },
+  distanceInfo: {
+    marginTop: 8,
+    gap: 6,
+  },
+  distanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  distanceText: {
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "500",
+  },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  timeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  timeText: {
+    fontSize: 12,
+    color: "#666",
+  },
+  loadingIndicator: {
+    marginLeft: 6,
   },
   navigation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 8,
   },
   navButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#369667',
+    backgroundColor: "#369667",
     borderRadius: 8,
     minWidth: 50,
   },
   navButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
   },
   navButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   navButtonTextDisabled: {
-    color: '#999',
-  },
-  indicator: {
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
+    color: "#999",
   },
   indicatorText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
   },
   content: {
     flex: 1,
@@ -330,41 +375,41 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222',
+    fontWeight: "bold",
+    color: "#222",
     marginBottom: 8,
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   rating: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#369667',
+    fontWeight: "600",
+    color: "#369667",
   },
   category: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   infoSection: {
     marginBottom: 20,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   iconWrapper: {
     width: 28,
     marginRight: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   infoText: {
     flex: 1,
     fontSize: 15,
-    color: '#444',
+    color: "#444",
     lineHeight: 22,
   },
   featuresSection: {
@@ -372,105 +417,104 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#222',
+    fontWeight: "600",
+    color: "#222",
     marginLeft: 6,
     marginBottom: 12,
   },
   summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   featuresTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   tag: {
-    backgroundColor: '#FFF5F5',
+    backgroundColor: "#FFF5F5",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#FFE0E0',
+    borderColor: "#FFE0E0",
   },
   tagText: {
     fontSize: 14,
-    color: '#369667',
-    fontWeight: '500',
+    color: "#369667",
+    fontWeight: "500",
   },
   summarySection: {
     marginBottom: 140,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
     padding: 16,
     borderRadius: 12,
   },
   summaryText: {
     fontSize: 15,
-    color: '#555',
+    color: "#555",
     lineHeight: 24,
   },
   actions: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 20,
     paddingBottom: 30,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    backgroundColor: "#fff",
+    borderTopColor: "#f0f0f0",
     gap: 8,
   },
   searchAgainButton: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: "#666",
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 6,
   },
   searchAgainButtonText: {
-    color: '#666',
+    color: "#666",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   callButton: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderWidth: 2,
-    borderColor: '#369667',
+    borderColor: "#369667",
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 6,
   },
   callButtonText: {
-    color: '#369667',
+    color: "#369667",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   navigateButton: {
     flex: 1,
-    backgroundColor: '#369667',
+    backgroundColor: "#369667",
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 6,
   },
   navigateButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

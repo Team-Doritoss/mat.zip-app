@@ -1,4 +1,4 @@
-import { generateAIResponse, searchRestaurants } from '@/data/mockRestaurants';
+import { searchRestaurants } from '@/data/mockRestaurants';
 import { ChatMessage, Restaurant } from '@/types/restaurant';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -26,7 +26,7 @@ export default function ChatInterface({ onRestaurantsFound, onNavigationRequest 
     {
       id: '1',
       role: 'assistant',
-      content: '안녕하세요! 맛.zip AI 어시스턴트입니다. 어떤 맛집을 찾고 계신가요?',
+      content: '안녕하세요! 맛.zip입니다. 어떤 맛집을 찾고 계신가요?',
       timestamp: new Date(),
     },
   ]);
@@ -54,14 +54,12 @@ export default function ChatInterface({ onRestaurantsFound, onNavigationRequest 
 
     setTimeout(() => {
       const restaurants = searchRestaurants(inputText);
-      const aiResponse = generateAIResponse(inputText, restaurants);
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiResponse,
+        content: '주변 맛집을 검색하고 있습니다...',
         timestamp: new Date(),
-        restaurants,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -381,8 +379,6 @@ const styles = StyleSheet.create({
   suggestionsRow: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   suggestionButton: {
     backgroundColor: '#f0f0f0',
