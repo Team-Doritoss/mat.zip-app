@@ -8,7 +8,7 @@ interface RestaurantFeaturesProps {
 }
 
 const getFeatureIcon = (feature: string): string => {
-  if (feature.includes("주차")) return "car";
+  if (feature.includes("주차")) return "navigation";
   if (feature.includes("예약")) return "calendar";
   if (feature.includes("애견")) return "heart";
   if (feature.includes("24시간")) return "clock";

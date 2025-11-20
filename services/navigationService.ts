@@ -20,17 +20,33 @@ export const navigateToRestaurant = async (
 ): Promise<void> => {
   try {
     const appURL = createKakaoMapAppURL(restaurant);
-    const canOpen = await Linking.canOpenURL(appURL);
 
-    if (canOpen) {
-      // 카카오맵 앱이 설치되어 있으면 앱으로 열기
+    // 먼저 카카오맵 앱으로 열기 시도
+    try {
       await Linking.openURL(appURL);
       console.log("카카오맵 앱으로 길찾기 시작");
-    } else {
-      // 앱이 없으면 웹으로 열기
-      const webURL = createKakaoMapWebURL(restaurant, userLat, userLng);
-      await Linking.openURL(webURL);
-      console.log("카카오맵 웹으로 길찾기 시작");
+    } catch (appError) {
+      // 앱이 없으면 앱 스토어로 안내
+      Alert.alert(
+        "카카오맵 앱 필요",
+        "길찾기를 위해 카카오맵 앱이 필요합니다. 앱 스토어로 이동하시겠습니까?",
+        [
+          {
+            text: "취소",
+            style: "cancel",
+          },
+          {
+            text: "앱 스토어로 이동",
+            onPress: async () => {
+              const storeURL =
+                Platform.OS === "ios"
+                  ? "https://apps.apple.com/kr/app/id304608425"
+                  : "https://play.google.com/store/apps/details?id=net.daum.android.map";
+              await Linking.openURL(storeURL);
+            },
+          },
+        ]
+      );
     }
   } catch (error) {
     console.error("길찾기 시작 실패:", error);

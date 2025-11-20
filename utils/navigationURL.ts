@@ -7,7 +7,8 @@ import { Restaurant } from "@/types/restaurant";
  */
 export const createKakaoMapAppURL = (restaurant: Restaurant): string => {
   const { name, latitude, longitude } = restaurant;
-  return `kakaomap://route?ep=${latitude},${longitude}&by=CAR`;
+  // 카카오맵 길찾기 딥링크 형식
+  return `kakaomap://route?ep=${latitude},${longitude}&ename=${encodeURIComponent(name)}`;
 };
 
 /**
