@@ -14,6 +14,7 @@ import { navigateToRestaurant } from "@/services/navigationService";
 import RestaurantInfo from "@/components/bottomsheet/RestaurantInfo";
 import RestaurantFeatures from "@/components/bottomsheet/RestaurantFeatures";
 import DistanceInfo from "@/components/bottomsheet/DistanceInfo";
+import ImageSlider from "@/components/bottomsheet/ImageSlider";
 import { bottomSheetStyles as styles } from "@/styles/BottomSheetStyles";
 import {
   BOTTOM_SHEET_MIN_HEIGHT,
@@ -88,8 +89,7 @@ export default function BottomSheet({
           <TouchableOpacity
             style={[styles.navButton, isFirst && styles.navButtonDisabled]}
             onPress={onPrevious}
-            disabled={isFirst}
-          >
+            disabled={isFirst}>
             <Feather
               name="chevron-left"
               size={18}
@@ -104,8 +104,7 @@ export default function BottomSheet({
           <TouchableOpacity
             style={[styles.navButton, isLast && styles.navButtonDisabled]}
             onPress={onNext}
-            disabled={isLast}
-          >
+            disabled={isLast}>
             <Feather
               name="chevron-right"
               size={18}
@@ -122,9 +121,9 @@ export default function BottomSheet({
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         <RestaurantInfo restaurant={restaurant} />
+        <ImageSlider images={restaurant.images} />
 
         <View style={styles.divider} />
 
