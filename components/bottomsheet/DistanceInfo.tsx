@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from "react-native";
 import { Restaurant } from "@/types/restaurant";
 import { bottomSheetStyles as styles } from "@/styles/BottomSheetStyles";
 import { formatDistance, formatTime } from "@/utils/formatters";
+import { Feather } from "@expo/vector-icons";
 
 interface DistanceInfoProps {
   restaurant: Restaurant;
@@ -23,10 +24,16 @@ export default function DistanceInfo({ restaurant }: DistanceInfoProps) {
   return (
     <View style={styles.distanceCard}>
       <Text style={styles.distanceTitle}>현재 위치에서</Text>
-      <Text style={styles.distanceValue}>
-        {formatDistance(meters)}
-        {carTime && ` • 차량 ${formatTime(carTime)}`}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Text style={styles.distanceValue}>{formatDistance(meters)}</Text>
+        {carTime && (
+          <>
+            <Text style={styles.distanceValue}> • </Text>
+            <Feather name="navigation" size={20} color="#369667" />
+            <Text style={styles.distanceValue}> {formatTime(carTime)}</Text>
+          </>
+        )}
+      </View>
     </View>
   );
 }

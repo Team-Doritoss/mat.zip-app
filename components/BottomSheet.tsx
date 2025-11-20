@@ -21,6 +21,7 @@ import {
   BOTTOM_SHEET_DEFAULT_HEIGHT,
   SCREEN_HEIGHT,
 } from "@/constants/dimensions";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface BottomSheetProps {
   restaurants: Restaurant[];
@@ -37,7 +38,6 @@ export default function BottomSheet({
   currentIndex,
   onPrevious,
   onNext,
-  onNavigate,
   onClose,
   onHeightChange,
 }: BottomSheetProps) {
@@ -45,7 +45,7 @@ export default function BottomSheet({
     (state) => state.setSheetHeight
   );
 
-  const { panResponder, animatedHeight, currentHeight } = useBottomSheetDrag(
+  const { panResponder, animatedHeight } = useBottomSheetDrag(
     {
       minHeight: BOTTOM_SHEET_MIN_HEIGHT,
       maxHeight: BOTTOM_SHEET_MAX_HEIGHT,

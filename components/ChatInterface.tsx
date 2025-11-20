@@ -13,17 +13,16 @@ import ChatMessage from "@/components/chat/ChatMessage";
 import ChatInput from "@/components/chat/ChatInput";
 import { COLORS } from "@/constants/colors";
 import { SPACING } from "@/constants/dimensions";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface ChatInterfaceProps {
   onRestaurantsFound?: (restaurants: Restaurant[]) => void;
   onNavigationRequest?: (restaurant: Restaurant) => void;
-  dragHandlers?: any;
 }
 
 export default function ChatInterface({
   onRestaurantsFound,
   onNavigationRequest,
-  dragHandlers,
 }: ChatInterfaceProps) {
   const {
     messages,
@@ -33,17 +32,14 @@ export default function ChatInterface({
     setInputText,
     handleSend,
   } = useChat(onRestaurantsFound);
+  const paddingBottom = useSafeAreaInsets().bottom;
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingBottom }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
     >
-      <View style={styles.dragHandle} {...dragHandlers}>
-        <View style={styles.dragBar} />
-      </View>
-
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}

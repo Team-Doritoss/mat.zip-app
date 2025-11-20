@@ -5,8 +5,8 @@ export const SCREEN_WIDTH = Dimensions.get("window").width;
 export const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 // BottomSheet 관련 상수
-export const BOTTOM_SHEET_MIN_HEIGHT = 100;
-export const BOTTOM_SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.85;
+export const BOTTOM_SHEET_MIN_HEIGHT = 190;
+export const BOTTOM_SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.9;
 export const BOTTOM_SHEET_DEFAULT_HEIGHT = SCREEN_HEIGHT * 0.4;
 
 // 헤더 관련 상수

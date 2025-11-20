@@ -3,6 +3,7 @@ import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
 import { SPACING, CHAT_INPUT_MIN_HEIGHT } from "@/constants/dimensions";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface ChatInputProps {
   value: string;
@@ -24,9 +25,10 @@ export default function ChatInput({
       onSend();
     }
   };
+  const paddingBottom = useSafeAreaInsets().bottom;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom }]}>
       <TextInput
         style={styles.input}
         value={value}

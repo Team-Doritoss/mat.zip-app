@@ -9,6 +9,7 @@ import { useRestaurantSearch } from "@/hooks/useRestaurantSearch";
 import { navigateToRestaurant } from "@/services/navigationService";
 import { SCREEN_HEIGHT } from "@/constants/dimensions";
 import { COLORS } from "@/constants/colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MIN_CHAT_HEIGHT = SCREEN_HEIGHT * 0.3;
 const MAX_CHAT_HEIGHT = SCREEN_HEIGHT * 0.9;
@@ -21,16 +22,15 @@ export default function HomeScreen() {
   const [currentChatHeight, setCurrentChatHeight] = useState(DEFAULT_CHAT_HEIGHT);
   const [heightBeforeKeyboard, setHeightBeforeKeyboard] = useState(DEFAULT_CHAT_HEIGHT);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const paddingBottom = useSafeAreaInsets().bottom;
 
   const setSheetHeight = useHeaderStore((state) => state.setSheetHeight);
   const { restaurants, setRestaurants, loadRouteInfo } = useRestaurantSearch();
 
-  // 초기 채팅 높이 설정
   useEffect(() => {
     setSheetHeight(DEFAULT_CHAT_HEIGHT);
   }, [setSheetHeight]);
 
-  // 키보드 이벤트 처리
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener("keyboardWillShow", () => {
       setIsKeyboardVisible(true);
@@ -55,7 +55,6 @@ export default function HomeScreen() {
     };
   }, [currentChatHeight, chatHeight, setSheetHeight]);
 
-  // 채팅 패널 드래그 처리
   const chatPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => !isKeyboardVisible,
     onMoveShouldSetPanResponder: () => !isKeyboardVisible,
@@ -95,16 +94,13 @@ export default function HomeScreen() {
     },
   });
 
-  // 식당 검색 완료 처리
   const handleRestaurantsFound = async (foundRestaurants: Restaurant[]) => {
     console.log("🎯 식당 검색 완료:", foundRestaurants.length);
 
-    // 즉시 식당 목록 표시
     setRestaurants(foundRestaurants);
     setCurrentIndex(0);
     setShowChat(false);
 
-    // 키보드 닫기 및 채팅창 원래 높이로
     Keyboard.dismiss();
     setTimeout(() => {
       setCurrentChatHeight(heightBeforeKeyboard);
@@ -116,21 +112,17 @@ export default function HomeScreen() {
       }).start();
     }, 300);
 
-    // 거리 정보 로드
     await loadRouteInfo(foundRestaurants);
   };
 
-  // 식당 인덱스 변경
   const handleIndexChange = (newIndex: number) => {
     setCurrentIndex(newIndex);
   };
 
-  // 길찾기
   const handleNavigate = async (restaurant: Restaurant) => {
     await navigateToRestaurant(restaurant);
   };
 
-  // 다시 검색 (바텀시트 닫기)
   const handleClose = () => {
     setRestaurants([]);
     setShowChat(true);
@@ -138,7 +130,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom }]}>
       <KakaoMap
         restaurants={restaurants}
         focusedRestaurant={restaurants[currentIndex]}
@@ -153,7 +145,6 @@ export default function HomeScreen() {
           <View style={styles.chatContent}>
             <ChatInterface
               onRestaurantsFound={handleRestaurantsFound}
-              dragHandlers={chatPanResponder.panHandlers}
             />
           </View>
         </Animated.View>

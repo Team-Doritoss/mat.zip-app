@@ -11,11 +11,6 @@ export const bottomSheetStyles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
   dragHandle: {
     alignItems: "center",
@@ -100,11 +95,6 @@ export const bottomSheetStyles = StyleSheet.create({
   infoTextClickable: {
     color: "#369667",
   },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: SPACING.lg,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
@@ -135,7 +125,6 @@ export const bottomSheetStyles = StyleSheet.create({
     backgroundColor: COLORS.gray100,
     padding: SPACING.md,
     borderRadius: 12,
-    marginBottom: SPACING.lg,
   },
   distanceTitle: {
     fontSize: 14,
@@ -152,8 +141,8 @@ export const bottomSheetStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#369667",
-    paddingVertical: SPACING.md,
-    borderRadius: 12,
+    paddingVertical: SPACING.xl,
+    borderRadius: 2000,
     gap: SPACING.sm,
   },
   actionButtonText: {
@@ -170,4 +159,7 @@ export const bottomSheetStyles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
   },
+  divider: {
+    marginVertical: SPACING.lg,
+  }
 });
