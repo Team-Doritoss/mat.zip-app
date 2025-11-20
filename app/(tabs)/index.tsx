@@ -1,55 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Linking, PanResponder, Animated, Dimensions, Keyboard } from 'react-native';
-import * as Location from 'expo-location';
-import KakaoMap from '@/components/KakaoMap';
-import ChatInterface from '@/components/ChatInterface';
-import BottomSheet from '@/components/BottomSheet';
-import { Restaurant } from '@/types/restaurant';
-import { KAKAO_REST_API_KEY } from '@/constants/key';
-import { useHeaderStore } from '@/stores/useHeaderStore';
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, Keyboard, Animated, PanResponder } from "react-native";
+import KakaoMap from "@/components/KakaoMap";
+import ChatInterface from "@/components/ChatInterface";
+import BottomSheet from "@/components/BottomSheet";
+import { Restaurant } from "@/types/restaurant";
+import { useHeaderStore } from "@/stores/useHeaderStore";
+import { useRestaurantSearch } from "@/hooks/useRestaurantSearch";
+import { navigateToRestaurant } from "@/services/navigationService";
+import { SCREEN_HEIGHT } from "@/constants/dimensions";
+import { COLORS } from "@/constants/colors";
 
-const { height } = Dimensions.get('window');
-const MIN_CHAT_HEIGHT = height * 0.3;
-const MAX_CHAT_HEIGHT = height * 0.9;
-const DEFAULT_CHAT_HEIGHT = height * 0.6;
+const MIN_CHAT_HEIGHT = SCREEN_HEIGHT * 0.3;
+const MAX_CHAT_HEIGHT = SCREEN_HEIGHT * 0.9;
+const DEFAULT_CHAT_HEIGHT = SCREEN_HEIGHT * 0.6;
 
 export default function HomeScreen() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showChat, setShowChat] = useState(true);
   const [chatHeight] = useState(new Animated.Value(DEFAULT_CHAT_HEIGHT));
   const [currentChatHeight, setCurrentChatHeight] = useState(DEFAULT_CHAT_HEIGHT);
   const [heightBeforeKeyboard, setHeightBeforeKeyboard] = useState(DEFAULT_CHAT_HEIGHT);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const setSheetHeight = useHeaderStore((state) => state.setSheetHeight);
 
+  const setSheetHeight = useHeaderStore((state) => state.setSheetHeight);
+  const { restaurants, setRestaurants, loadRouteInfo } = useRestaurantSearch();
+
+  // 초기 채팅 높이 설정
   useEffect(() => {
     setSheetHeight(DEFAULT_CHAT_HEIGHT);
   }, [setSheetHeight]);
 
+  // 키보드 이벤트 처리
   useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      'keyboardWillShow',
-      () => {
-        setIsKeyboardVisible(true);
-        setHeightBeforeKeyboard(currentChatHeight);
-        setCurrentChatHeight(MAX_CHAT_HEIGHT);
-        setSheetHeight(MAX_CHAT_HEIGHT);
-        Animated.spring(chatHeight, {
-          toValue: MAX_CHAT_HEIGHT,
-          useNativeDriver: false,
-          damping: 20,
-          stiffness: 150,
-        }).start();
-      }
-    );
+    const keyboardWillShow = Keyboard.addListener("keyboardWillShow", () => {
+      setIsKeyboardVisible(true);
+      setHeightBeforeKeyboard(currentChatHeight);
+      setCurrentChatHeight(MAX_CHAT_HEIGHT);
+      setSheetHeight(MAX_CHAT_HEIGHT);
+      Animated.spring(chatHeight, {
+        toValue: MAX_CHAT_HEIGHT,
+        useNativeDriver: false,
+        damping: 20,
+        stiffness: 150,
+      }).start();
+    });
 
-    const keyboardWillHide = Keyboard.addListener(
-      'keyboardWillHide',
-      () => {
-        setIsKeyboardVisible(false);
-      }
-    );
+    const keyboardWillHide = Keyboard.addListener("keyboardWillHide", () => {
+      setIsKeyboardVisible(false);
+    });
 
     return () => {
       keyboardWillShow.remove();
@@ -57,156 +55,7 @@ export default function HomeScreen() {
     };
   }, [currentChatHeight, chatHeight, setSheetHeight]);
 
-  const getRouteInfo = async (
-    userLat: number,
-    userLng: number,
-    destLat: number,
-    destLng: number
-  ) => {
-    try {
-      const carResponse = await fetch(
-        `https://apis-navi.kakaomobility.com/v1/waypoints/directions`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            origin: { x: userLng, y: userLat },
-            destination: { x: destLng, y: destLat },
-            priority: 'RECOMMEND',
-            car_fuel: 'GASOLINE',
-            car_hipass: false,
-            alternatives: false,
-            road_details: true
-          })
-        }
-      );
-
-      let meters = 0;
-      let pathCoordinates: Array<{ lat: number; lng: number }> = [];
-
-      if (carResponse.ok) {
-        const carData = await carResponse.json();
-        if (carData.routes && carData.routes.length > 0) {
-          const route = carData.routes[0];
-          meters = route.summary.distance;
-          console.log('📍 거리:', meters >= 1000 ? `${(meters / 1000).toFixed(1)}km` : `${meters}m`);
-
-          // 경로 좌표 추출
-          if (route.sections && route.sections.length > 0) {
-            route.sections.forEach((section: any) => {
-              if (section.roads && section.roads.length > 0) {
-                section.roads.forEach((road: any) => {
-                  if (road.vertexes && road.vertexes.length > 0) {
-                    // vertexes는 [x1, y1, x2, y2, ...] 형태
-                    for (let i = 0; i < road.vertexes.length; i += 2) {
-                      pathCoordinates.push({
-                        lng: road.vertexes[i],
-                        lat: road.vertexes[i + 1]
-                      });
-                    }
-                  }
-                });
-              }
-            });
-          }
-          console.log('🛣️ 경로 좌표 개수:', pathCoordinates.length);
-        }
-      } else {
-        const errorText = await carResponse.text();
-        console.log('카카오 자동차 API 에러:', carResponse.status, errorText);
-      }
-
-      return {
-        meters,
-        pathCoordinates,
-      };
-    } catch (error) {
-      console.log('카카오 길찾기 API 호출 실패:', error);
-      return {
-        meters: 0,
-        pathCoordinates: [],
-      };
-    }
-  };
-
-  const handleRestaurantsFound = async (foundRestaurants: Restaurant[]) => {
-    console.log('🎯 handleRestaurantsFound 호출됨, 식당 수:', foundRestaurants.length);
-
-    // 즉시 식당 목록 표시 (거리 정보 없이)
-    setRestaurants(foundRestaurants);
-    setCurrentIndex(0);
-    setShowChat(false);
-    console.log('✅ 바텀시트 및 마커 표시');
-
-    Keyboard.dismiss();
-    setTimeout(() => {
-      setCurrentChatHeight(heightBeforeKeyboard);
-      Animated.spring(chatHeight, {
-        toValue: heightBeforeKeyboard,
-        useNativeDriver: false,
-        damping: 20,
-        stiffness: 150,
-      }).start();
-    }, 300);
-
-    let userLat = 37.5172;
-    let userLng = 127.0473;
-
-    try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        userLat = location.coords.latitude;
-        userLng = location.coords.longitude;
-        console.log('📍 사용자 위치:', userLat, userLng);
-      }
-    } catch (error) {
-      console.log('위치 정보 가져오기 실패:', error);
-    }
-
-    console.log('🔄 거리/시간 정보 로딩 시작...');
-
-    // 첫 번째 식당의 거리 정보를 즉시 로드
-    if (foundRestaurants.length > 0) {
-      const firstRouteInfo = await getRouteInfo(
-        userLat,
-        userLng,
-        foundRestaurants[0].latitude,
-        foundRestaurants[0].longitude
-      );
-
-      // 원본 객체를 직접 수정 (참조 유지)
-      foundRestaurants[0].distance = firstRouteInfo;
-      setRestaurants([...foundRestaurants]);
-      console.log('✅ 첫 번째 식당 거리 정보 로드 완료');
-    }
-
-    // 나머지 식당들은 백그라운드에서 순차적으로 로드
-    for (let i = 1; i < foundRestaurants.length; i++) {
-      const routeInfo = await getRouteInfo(
-        userLat,
-        userLng,
-        foundRestaurants[i].latitude,
-        foundRestaurants[i].longitude
-      );
-
-      // 원본 객체를 직접 수정 (참조 유지)
-      foundRestaurants[i].distance = routeInfo;
-      setRestaurants([...foundRestaurants]);
-
-      console.log(`✅ ${i + 1}번째 식당 거리 정보 로드 완료`);
-    }
-
-    console.log('🍽️ 모든 거리 정보 로딩 완료');
-  };
-
-  const handleIndexChange = (newIndex: number) => {
-    setCurrentIndex(newIndex);
-  };
-
+  // 채팅 패널 드래그 처리
   const chatPanResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => !isKeyboardVisible,
     onMoveShouldSetPanResponder: () => !isKeyboardVisible,
@@ -246,35 +95,46 @@ export default function HomeScreen() {
     },
   });
 
+  // 식당 검색 완료 처리
+  const handleRestaurantsFound = async (foundRestaurants: Restaurant[]) => {
+    console.log("🎯 식당 검색 완료:", foundRestaurants.length);
+
+    // 즉시 식당 목록 표시
+    setRestaurants(foundRestaurants);
+    setCurrentIndex(0);
+    setShowChat(false);
+
+    // 키보드 닫기 및 채팅창 원래 높이로
+    Keyboard.dismiss();
+    setTimeout(() => {
+      setCurrentChatHeight(heightBeforeKeyboard);
+      Animated.spring(chatHeight, {
+        toValue: heightBeforeKeyboard,
+        useNativeDriver: false,
+        damping: 20,
+        stiffness: 150,
+      }).start();
+    }, 300);
+
+    // 거리 정보 로드
+    await loadRouteInfo(foundRestaurants);
+  };
+
+  // 식당 인덱스 변경
+  const handleIndexChange = (newIndex: number) => {
+    setCurrentIndex(newIndex);
+  };
+
+  // 길찾기
   const handleNavigate = async (restaurant: Restaurant) => {
-    try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      let userLat = 37.5172;
-      let userLng = 127.0473;
+    await navigateToRestaurant(restaurant);
+  };
 
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        userLat = location.coords.latitude;
-        userLng = location.coords.longitude;
-      }
-
-      // 카카오맵 앱 스킴
-      const kakaoMapUrl = `kakaomap://route?sp=${userLat},${userLng}&ep=${restaurant.latitude},${restaurant.longitude}&by=CAR`;
-      // 카카오맵 웹 URL - 출발지와 목적지 모두 지정
-      const kakaoWebUrl = `https://map.kakao.com/link/from/내위치,${userLat},${userLng}/to/${encodeURIComponent(restaurant.name)},${restaurant.latitude},${restaurant.longitude}`;
-
-      try {
-        // 앱 스킴 우선 시도
-        await Linking.openURL(kakaoMapUrl);
-        console.log('카카오맵 앱으로 열기 성공');
-      } catch (appError) {
-        // 앱이 없거나 실패하면 웹 URL로 fallback
-        console.log('카카오맵 앱 열기 실패, 웹으로 fallback:', appError);
-        await Linking.openURL(kakaoWebUrl);
-      }
-    } catch (error) {
-      console.error('길찾기 실행 실패:', error);
-    }
+  // 다시 검색 (바텀시트 닫기)
+  const handleClose = () => {
+    setRestaurants([]);
+    setShowChat(true);
+    setSheetHeight(DEFAULT_CHAT_HEIGHT);
   };
 
   return (
@@ -306,11 +166,7 @@ export default function HomeScreen() {
           onPrevious={() => handleIndexChange(currentIndex - 1)}
           onNext={() => handleIndexChange(currentIndex + 1)}
           onNavigate={handleNavigate}
-          onClose={() => {
-            setRestaurants([]);
-            setShowChat(true);
-            setSheetHeight(DEFAULT_CHAT_HEIGHT);
-          }}
+          onClose={handleClose}
         />
       )}
     </View>
@@ -320,31 +176,31 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
   },
   chatOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    shadowColor: '#000',
+    shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 10,
   },
   chatHandle: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 12,
     paddingBottom: 8,
   },
   handle: {
     width: 48,
     height: 5,
-    backgroundColor: '#ddd',
+    backgroundColor: COLORS.gray300,
     borderRadius: 3,
   },
   chatContent: {

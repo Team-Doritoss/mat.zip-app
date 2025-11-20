@@ -1,24 +1,26 @@
-import { Restaurant } from "@/types/restaurant";
-import { Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import React, { useState, useEffect } from "react";
 import {
-  ActivityIndicator,
   Animated,
-  Dimensions,
-  Linking,
-  PanResponder,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { Restaurant } from "@/types/restaurant";
 import { useHeaderStore } from "@/stores/useHeaderStore";
-
-const { height } = Dimensions.get("window");
-const MIN_HEIGHT = 230;
-const MAX_HEIGHT = height * 0.90;
-const DEFAULT_HEIGHT = height * 0.55;
+import { useBottomSheetDrag } from "@/hooks/useBottomSheetDrag";
+import { navigateToRestaurant } from "@/services/navigationService";
+import RestaurantInfo from "@/components/bottomsheet/RestaurantInfo";
+import RestaurantFeatures from "@/components/bottomsheet/RestaurantFeatures";
+import DistanceInfo from "@/components/bottomsheet/DistanceInfo";
+import { bottomSheetStyles as styles } from "@/styles/BottomSheetStyles";
+import {
+  BOTTOM_SHEET_MIN_HEIGHT,
+  BOTTOM_SHEET_MAX_HEIGHT,
+  BOTTOM_SHEET_DEFAULT_HEIGHT,
+  SCREEN_HEIGHT,
+} from "@/constants/dimensions";
 
 interface BottomSheetProps {
   restaurants: Restaurant[];
@@ -39,512 +41,117 @@ export default function BottomSheet({
   onClose,
   onHeightChange,
 }: BottomSheetProps) {
-  const [sheetHeight] = useState(new Animated.Value(DEFAULT_HEIGHT));
-  const [currentHeight, setCurrentHeight] = useState(DEFAULT_HEIGHT);
-  const updateHeaderSheetHeight = useHeaderStore(state => state.setSheetHeight);
+  const updateHeaderSheetHeight = useHeaderStore(
+    (state) => state.setSheetHeight
+  );
+
+  const { panResponder, animatedHeight, currentHeight } = useBottomSheetDrag(
+    {
+      minHeight: BOTTOM_SHEET_MIN_HEIGHT,
+      maxHeight: BOTTOM_SHEET_MAX_HEIGHT,
+      defaultHeight: BOTTOM_SHEET_DEFAULT_HEIGHT,
+      snapPoints: [
+        BOTTOM_SHEET_MIN_HEIGHT,
+        BOTTOM_SHEET_DEFAULT_HEIGHT,
+        BOTTOM_SHEET_MAX_HEIGHT,
+      ],
+    },
+    (height) => {
+      updateHeaderSheetHeight(height);
+      onHeightChange?.(height);
+    }
+  );
 
   const restaurant = restaurants[currentIndex];
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === restaurants.length - 1;
 
-  // 초기 높이 설정
   useEffect(() => {
-    updateHeaderSheetHeight(DEFAULT_HEIGHT);
-  }, [updateHeaderSheetHeight]);
-
-  // 컴포넌트 언마운트 시 높이 초기화
-  useEffect(() => {
+    updateHeaderSheetHeight(BOTTOM_SHEET_DEFAULT_HEIGHT);
     return () => {
       updateHeaderSheetHeight(0);
     };
   }, [updateHeaderSheetHeight]);
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return Math.abs(gestureState.dy) > 0;
-    },
-    onPanResponderGrant: () => {
-      sheetHeight.stopAnimation();
-    },
-    onPanResponderMove: (_, gestureState) => {
-      const newHeight = currentHeight - gestureState.dy;
-      if (newHeight >= MIN_HEIGHT && newHeight <= MAX_HEIGHT) {
-        sheetHeight.setValue(newHeight);
-        updateHeaderSheetHeight(newHeight);
-        onHeightChange?.(newHeight);
-      }
-    },
-    onPanResponderRelease: (_, gestureState) => {
-      let newHeight = currentHeight - gestureState.dy;
-
-      if (newHeight < MIN_HEIGHT + 100) {
-        newHeight = MIN_HEIGHT;
-      } else if (newHeight < DEFAULT_HEIGHT - 50) {
-        newHeight = MIN_HEIGHT;
-      } else if (newHeight < DEFAULT_HEIGHT + 50) {
-        newHeight = DEFAULT_HEIGHT;
-      } else {
-        newHeight = MAX_HEIGHT;
-      }
-
-      setCurrentHeight(newHeight);
-      updateHeaderSheetHeight(newHeight);
-      onHeightChange?.(newHeight);
-      Animated.spring(sheetHeight, {
-        toValue: newHeight,
-        useNativeDriver: false,
-        damping: 20,
-        stiffness: 150,
-      }).start();
-    },
-  });
+  const handleNavigate = async () => {
+    await navigateToRestaurant(restaurant);
+  };
 
   return (
-    <Animated.View style={[styles.container, { height: sheetHeight }]}>
-      <View style={styles.dragArea} {...panResponder.panHandlers}>
-        <View style={styles.header}>
-          <View style={styles.handle} />
-        </View>
-
-        <View style={styles.minimizedContent}>
-          <View style={styles.compactInfo}>
-            <View style={styles.nameDistanceRow}>
-              <Text style={styles.compactName} numberOfLines={1}>
-                {restaurant.name}
-              </Text>
-              {restaurant.distance && restaurant.distance.meters > 0 ? (
-                <Text style={styles.nameDistanceText}>
-                  {restaurant.distance.meters >= 1000
-                    ? `${(restaurant.distance.meters / 1000).toFixed(1)}km`
-                    : `${restaurant.distance.meters}m`}
-                </Text>
-              ) : (
-                !restaurant.distance && (
-                  <ActivityIndicator size="small" color="#999" />
-                )
-              )}
-            </View>
-            <View style={styles.compactRatingRow}>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color="#369667" />
-                <Text style={styles.compactRating}>{restaurant.rating}</Text>
-              </View>
-              <Text style={styles.compactCategory}>{restaurant.category}</Text>
-            </View>
-          </View>
-
-          <View style={styles.navigation}>
-            <TouchableOpacity
-              style={[styles.navButton, isFirst && styles.navButtonDisabled]}
-              onPress={onPrevious}
-              disabled={isFirst}>
-              <Feather
-                name="chevron-left"
-                size={18}
-                color={isFirst ? "#999" : "#fff"}
-              />
-            </TouchableOpacity>
-
-            <Text style={styles.indicatorText}>
-              {currentIndex + 1} / {restaurants.length}
-            </Text>
-
-            <TouchableOpacity
-              style={[styles.navButton, isLast && styles.navButtonDisabled]}
-              onPress={onNext}
-              disabled={isLast}>
-              <Feather
-                name="chevron-right"
-                size={18}
-                color={isLast ? "#999" : "#fff"}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <Animated.View style={[styles.container, { height: animatedHeight }]}>
+      <View style={styles.dragHandle} {...panResponder.panHandlers}>
+        <View style={styles.dragBar} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.name}>{restaurant.name}</Text>
-        <View style={styles.ratingRow}>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#369667" />
-            <Text style={styles.rating}>{restaurant.rating}</Text>
-          </View>
-          <Text style={styles.category}>{restaurant.category}</Text>
+      <View style={styles.header}>
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[styles.navButton, isFirst && styles.navButtonDisabled]}
+            onPress={onPrevious}
+            disabled={isFirst}
+          >
+            <Feather
+              name="chevron-left"
+              size={18}
+              color={isFirst ? "#999" : "#369667"}
+            />
+          </TouchableOpacity>
+
+          <Text style={styles.paginationText}>
+            {currentIndex + 1} / {restaurants.length}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.navButton, isLast && styles.navButtonDisabled]}
+            onPress={onNext}
+            disabled={isLast}
+          >
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={isLast ? "#999" : "#369667"}
+            />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.infoSection}>
-          <View style={styles.detailRow}>
-            <View style={styles.iconWrapper}>
-              <Feather name="map-pin" size={18} color="#369667" />
-            </View>
-            <Text style={styles.infoText}>{restaurant.address}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <View style={styles.iconWrapper}>
-              <Feather name="clock" size={18} color="#369667" />
-            </View>
-            <Text style={styles.infoText}>{restaurant.hours}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <View style={styles.iconWrapper}>
-              <Feather name="phone" size={18} color="#369667" />
-            </View>
-            <Text style={styles.infoText}>{restaurant.phone}</Text>
-          </View>
-          {restaurant.priceRange && (
-            <View style={styles.detailRow}>
-              <View style={styles.iconWrapper}>
-                <Feather name="dollar-sign" size={18} color="#369667" />
-              </View>
-              <Text style={styles.infoText}>{restaurant.priceRange}</Text>
-            </View>
-          )}
-        </View>
+        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <Feather name="x" size={18} color="#666" />
+        </TouchableOpacity>
+      </View>
 
-        {restaurant.features.length > 0 && (
-          <View style={styles.featuresSection}>
-            <Text style={styles.sectionTitle}>특징</Text>
-            <View style={styles.featuresTags}>
-              {restaurant.features.map((feature, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{feature}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <RestaurantInfo restaurant={restaurant} />
+
+        <View style={styles.divider} />
+
+        <DistanceInfo restaurant={restaurant} />
+
+        {restaurant.features && restaurant.features.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            <RestaurantFeatures features={restaurant.features} />
+          </>
         )}
 
-        <View style={styles.summarySection}>
-          <View style={styles.summaryHeader}>
-            <MaterialIcons name="smart-toy" size={20} color="#369667" />
-            <Text style={styles.sectionTitle}>AI 요약</Text>
-          </View>
-          <Text style={styles.summaryText}>{restaurant.summary}</Text>
-        </View>
+        {restaurant.summary && (
+          <>
+            <View style={styles.divider} />
+            <View>
+              <Text style={styles.sectionTitle}>AI 요약</Text>
+              <Text style={styles.summaryText}>{restaurant.summary}</Text>
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      <View style={[styles.actions, { borderTopWidth: currentHeight >= DEFAULT_HEIGHT ? 1 : 0 }]}>
-        <TouchableOpacity style={styles.searchAgainButton} onPress={onClose}>
-          <Feather name="search" size={16} color="#666" />
-          <Text style={styles.searchAgainButtonText}>다시 검색</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.callButton}
-          onPress={() => Linking.openURL(`tel:${restaurant.phone}`)}>
-          <Feather name="phone" size={16} color="#369667" />
-          <Text style={styles.callButtonText}>전화</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navigateButton}
-          onPress={() => onNavigate(restaurant)}>
-          <Feather name="navigation" size={16} color="#fff" />
-          <Text style={styles.navigateButtonText}>길찾기</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.actionButton} onPress={handleNavigate}>
+        <Feather name="navigation" size={20} color="#fff" />
+        <Text style={styles.actionButtonText}>길찾기</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  dragArea: {
-    // 드래그 가능한 영역 (헤더 + minimizedContent)
-  },
-  header: {
-    alignItems: "center",
-    paddingTop: 12,
-    paddingBottom: 8,
-    position: "relative",
-  },
-  handle: {
-    width: 48,
-    height: 5,
-    backgroundColor: "#ddd",
-    borderRadius: 3,
-  },
-  closeButton: {
-    position: "absolute",
-    right: 16,
-    top: 12,
-    width: 32,
-    height: 32,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: "#666",
-  },
-  minimizedContent: {
-    paddingHorizontal: 20,
-    borderBottomColor: "#f0f0f0",
-    borderBottomWidth: 1
-  },
-  compactInfo: {
-    marginBottom: 12,
-  },
-  nameDistanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-    gap: 8,
-  },
-  compactName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#222",
-    flex: 1,
-  },
-  nameDistanceText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#369667",
-    flexShrink: 0,
-  },
-  compactRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginRight: 8,
-  },
-  compactRating: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#369667",
-  },
-  compactCategory: {
-    fontSize: 13,
-    color: "#666",
-  },
-  distanceInfo: {
-    marginTop: 8,
-    gap: 6,
-  },
-  distanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  distanceText: {
-    fontSize: 13,
-    color: "#666",
-    fontWeight: "500",
-  },
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  timeItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  timeText: {
-    fontSize: 12,
-    color: "#666",
-  },
-  loadingIndicator: {
-    marginLeft: 6,
-  },
-  navigation: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  navButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: "#369667",
-    borderRadius: 8,
-    minWidth: 50,
-  },
-  navButtonDisabled: {
-    backgroundColor: "#e0e0e0",
-  },
-  navButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  navButtonTextDisabled: {
-    color: "#999",
-  },
-  indicatorText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#222",
-    marginBottom: 8,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  rating: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#369667",
-  },
-  category: {
-    fontSize: 14,
-    color: "#666",
-  },
-  infoSection: {
-    marginBottom: 20,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  iconWrapper: {
-    width: 28,
-    marginRight: 10,
-    alignItems: "center",
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#444",
-    lineHeight: 22,
-  },
-  featuresSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#222",
-    marginLeft: 6,
-    marginBottom: 12,
-  },
-  summaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  featuresTags: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  tag: {
-    backgroundColor: "#FFF5F5",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#FFE0E0",
-  },
-  tagText: {
-    fontSize: 14,
-    color: "#369667",
-    fontWeight: "500",
-  },
-  summarySection: {
-    marginBottom: 140,
-    backgroundColor: "#f8f9fa",
-    padding: 16,
-    borderRadius: 12,
-  },
-  summaryText: {
-    fontSize: 15,
-    color: "#555",
-    lineHeight: 24,
-  },
-  actions: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    padding: 20,
-    paddingBottom: 30,
-    backgroundColor: "#fff",
-    borderTopColor: "#f0f0f0",
-    gap: 8,
-  },
-  searchAgainButton: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#666",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-  searchAgainButtonText: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  callButton: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#369667",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-  callButtonText: {
-    color: "#369667",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  navigateButton: {
-    flex: 1,
-    backgroundColor: "#369667",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-  navigateButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
